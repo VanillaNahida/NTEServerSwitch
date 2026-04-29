@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>AppIcon.ico</ApplicationIcon>
+    <AssemblyName>异环切服器</AssemblyName>
+    <RootNamespace>异环切服器</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Company>哔哩哔哩@香草味的纳西妲喵</Company>
+    <Product>异环官服B服切换器 哔哩哔哩@香草味的纳西妲喵</Product>
+    <Description>《异环》官服B服切换工具</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Authors>哔哩哔哩@香草味的纳西妲喵</Authors>
+    <Copyright>开发者：哔哩哔哩@香草味的纳西妲喵</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="AppIcon.ico" />
+  </ItemGroup>
+
+</Project>
