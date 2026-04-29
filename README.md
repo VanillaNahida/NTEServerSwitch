@@ -1,6 +1,6 @@
 <div align="center">
 
-# NTEServerSwitch
+# NTEServerSwitch 异环切服器
 
 _✨ 异环官服B服切换器 ✨_
 
