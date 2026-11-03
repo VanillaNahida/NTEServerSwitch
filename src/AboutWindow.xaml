@@ -31,7 +31,8 @@
                    Margin="0,5,0,5"/>
 
         <TextBlock Grid.Row="2"
-                   Text="版本：1.1.0"
+                   x:Name="VersionText"
+                   Text="版本：1.2.0"
                    FontSize="14"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,5"/>

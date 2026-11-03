@@ -70,6 +70,7 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button x:Name="RefreshCacheButton" Content="更新资源"
                         Click="RefreshCacheButton_Click"/>
+                <Button x:Name="CheckUpdateButton" Content="检查更新" Click="CheckUpdateButton_Click"/>
                 <Button x:Name="LogButton" Content="日志" Click="LogButton_Click"/>
                 <Button x:Name="AboutButton" Content="关于" Click="AboutButton_Click"/>
             </StackPanel>

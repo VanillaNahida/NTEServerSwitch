@@ -9,9 +9,9 @@
     <!-- 程序集名必须是纯 ASCII：中文 exe/dll 名在某些系统区域设置下会出现莫名其妙的加载问题 -->
     <AssemblyName>NTEServerSwitch</AssemblyName>
     <RootNamespace>NTEServerSwitch</RootNamespace>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
     <Company>哔哩哔哩@香草味的纳西妲喵</Company>
     <Product>异环官服B服切换器 哔哩哔哩@香草味的纳西妲喵</Product>
     <Description>《异环》官服B服切换工具</Description>
@@ -24,11 +24,15 @@
     <Resource Include="AppIcon.ico" />
   </ItemGroup>
 
-  <!-- _harness 是开发期的自测工程，里面有自己的 obj/bin，绝不能被主工程扫进来 -->
+  <!-- _harness / _probe 是开发期的自测工程与临时目录，里面有自己的 obj/bin，绝不能被主工程扫进来
+       （漏掉 Compile Remove 的话，里面的 Program.cs 和生成的 AssemblyInfo.cs 会被编进主工程，报 CS0579 特性重复） -->
   <ItemGroup>
     <Compile Remove="_harness\**" />
     <Page Remove="_harness\**" />
     <None Remove="_harness\**" />
+    <Compile Remove="_probe\**" />
+    <Page Remove="_probe\**" />
+    <EmbeddedResource Remove="_probe\**" />
     <None Remove="_probe\**" />
   </ItemGroup>
 

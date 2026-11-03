@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Navigation;
+using NTEServerSwitch.Core;
 
 namespace NTEServerSwitch
 {
@@ -9,6 +10,8 @@ namespace NTEServerSwitch
         public AboutWindow()
         {
             InitializeComponent();
+            // 版本号只认程序集，不再手改这里的字面量
+            VersionText.Text = "版本：" + UpdateChecker.CurrentVersionText;
         }
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)

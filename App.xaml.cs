@@ -9,14 +9,18 @@ namespace NTEServerSwitch
 {
     public partial class App : Application
     {
+#if DEBUG
         private bool _smokeTest;
+#endif
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
+#if DEBUG
             _smokeTest = e.Args != null &&
                          e.Args.Any(a => string.Equals(a, "--smoke-test", StringComparison.OrdinalIgnoreCase));
+#endif
 
             LogService log = LogService.Instance;
             log.Initialize();
@@ -31,14 +35,18 @@ namespace NTEServerSwitch
             MainWindow = window;
             window.Show();
 
+#if DEBUG
             if (_smokeTest)
             {
                 RunSmokeTest(window);
             }
+#endif
         }
 
+#if DEBUG
         /// <summary>用 --smoke-test 启动时做的自检：开一个日志窗口并强制布局，跑完直接退出。
-        /// 用来验证"发布出来的产物"能不能真正开窗（例如 InvariantGlobalization 会让 WPF 排版崩溃）。</summary>
+        /// 用来验证"发布出来的产物"能不能真正开窗（例如 InvariantGlobalization 会让 WPF 排版崩溃）。
+        /// 只编译进 Debug 构建（本地调试 / 自检专用），正式发布包里不存在这个参数。</summary>
         private void RunSmokeTest(MainWindow main)
         {
             Dispatcher.BeginInvoke(new Action(() =>
@@ -60,10 +68,12 @@ namespace NTEServerSwitch
                 }
             }), DispatcherPriority.ApplicationIdle);
         }
+#endif
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             LogService.Instance.Exception("界面线程未处理异常：", e.Exception);
+#if DEBUG
             if (_smokeTest)
             {
                 // 自检模式不能弹窗等人点，直接以非零码退出
@@ -71,6 +81,7 @@ namespace NTEServerSwitch
                 e.Handled = true;
                 return;
             }
+#endif
             MessageBox.Show("程序遇到未处理的错误：\n" + e.Exception.Message +
                             "\n\n详细信息已写入日志，可在日志窗口导出。",
                             "出错了", MessageBoxButton.OK, MessageBoxImage.Error);

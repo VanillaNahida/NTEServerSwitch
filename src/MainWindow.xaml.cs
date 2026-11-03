@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -23,6 +24,8 @@ namespace NTEServerSwitch
 
         private ResourceSyncer _syncer;
         private SwitchService _switchService;
+        private UpdateClient _updateClient;
+        private bool _updatePromptShown;
         private SyncReport _report;
         private CacheState _state;
         private CancellationTokenSource _cancellation;
@@ -36,6 +39,7 @@ namespace NTEServerSwitch
 
             _syncer = new ResourceSyncer(_cache);
             _switchService = new SwitchService(_cache);
+            _updateClient = new UpdateClient();
 
             Closed += OnWindowClosed;
 
@@ -50,6 +54,9 @@ namespace NTEServerSwitch
             _log.Info("开始检查游戏目录与资源配置。");
             ShowStateFromDisk();
             UpdateServerStatus();
+
+            // 版本检查走后台，失败不打扰用户；跟资源检查并行跑，谁也不等谁。
+            _ = RunUpdateCheckAsync(true);
 
             if (string.IsNullOrEmpty(_gamePath))
             {
@@ -85,6 +92,12 @@ namespace NTEServerSwitch
             {
                 _syncer.Dispose();
                 _syncer = null;
+            }
+
+            if (_updateClient != null)
+            {
+                _updateClient.Dispose();
+                _updateClient = null;
             }
         }
 
@@ -309,9 +322,107 @@ namespace NTEServerSwitch
                 WorkProgressBar.IsIndeterminate = false;
                 WorkProgressBar.Value = Math.Max(0, Math.Min(1, progress.Fraction)) * 100;
             }
-            WorkProgressText.Text = string.IsNullOrEmpty(progress.Detail)
-                                        ? progress.Stage
-                                        : progress.Stage + " · " + progress.Detail;
+            string text = string.IsNullOrEmpty(progress.Detail)
+                              ? progress.Stage
+                              : progress.Stage + " · " + progress.Detail;
+            if (progress.BytesPerSecond > 0.5)
+            {
+                text += " · " + PathUtil.FormatBytes((long)progress.BytesPerSecond) + "/s";
+            }
+            WorkProgressText.Text = text;
+        }
+
+        // ---------- 版本检查 ----------
+
+        /// <summary>
+        /// 跟 GitHub Releases 比对版本。silent = 启动时自动检查：失败什么都不做，有更新才提示。
+        /// </summary>
+        private async Task RunUpdateCheckAsync(bool silent)
+        {
+            if (silent)
+            {
+                if (_updatePromptShown)
+                {
+                    return;
+                }
+                // 先让启动时的资源检查把界面占上，避免两条流程抢状态栏
+                await Task.Delay(1200);
+            }
+
+            if (_updateClient == null)
+            {
+                return;
+            }
+            if (!silent)
+            {
+                SetStatus("正在检查新版本…");
+            }
+
+            ReleaseInfo release = await UpdateChecker.CheckAsync(_updateClient, CancellationToken.None);
+            if (release == null)
+            {
+                _log.Warn("检查新版本失败（网络不可用或 GitHub 接口异常），按静默处理。");
+                if (!silent)
+                {
+                    SetStatus("检查更新失败，请稍后再试。");
+                    MessageBox.Show(this, "检查更新失败，请检查网络后重试。", "检查更新",
+                                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                return;
+            }
+
+            string current = UpdateChecker.CurrentVersionText;
+            if (!UpdateChecker.IsNewer(release.TagName, UpdateChecker.CurrentVersion))
+            {
+                _log.Info("已是最新版本：" + current + "（远端 " + release.Version + "）。");
+                if (!silent)
+                {
+                    SetStatus("已是最新版本 " + current + "。");
+                    MessageBox.Show(this, "当前已经是最新版本 " + current + "。", "检查更新",
+                                    MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                return;
+            }
+
+            _updatePromptShown = true;
+            _log.Success("发现新版本 " + release.Version + "（当前 " + current + "）。");
+            SetStatus("发现新版本 " + release.Version + "，点击「检查更新」可前往下载。");
+
+            MessageBoxResult answer = MessageBox.Show(
+                this,
+                "发现新版本 " + release.Version + "（当前 " + current + "）。" + Environment.NewLine +
+                Environment.NewLine + "是否前往 GitHub Releases 下载？",
+                "发现新版本",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information,
+                MessageBoxResult.Yes);
+            if (answer == MessageBoxResult.Yes)
+            {
+                OpenUrl(string.IsNullOrEmpty(release.HtmlUrl)
+                            ? UpdateChecker.LatestReleasePageUrl
+                            : release.HtmlUrl);
+            }
+        }
+
+        private void OpenUrl(string url)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _log.Warn("打开链接失败：" + url + " - " + ex.Message);
+            }
+        }
+
+        private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            await RunUpdateCheckAsync(false);
         }
 
         // ---------- 资源同步 ----------

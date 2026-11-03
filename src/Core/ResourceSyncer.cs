@@ -16,9 +16,18 @@ namespace NTEServerSwitch.Core
 
         public double Fraction { get; set; }
 
-        public static SyncProgress Create(string stage, string detail, double fraction)
+        /// <summary>当前下载速度（字节/秒）；不是下载阶段时为 0。</summary>
+        public double BytesPerSecond { get; set; }
+
+        public static SyncProgress Create(string stage, string detail, double fraction, double bytesPerSecond = 0)
         {
-            return new SyncProgress { Stage = stage, Detail = detail ?? string.Empty, Fraction = fraction };
+            return new SyncProgress
+            {
+                Stage = stage,
+                Detail = detail ?? string.Empty,
+                Fraction = fraction,
+                BytesPerSecond = bytesPerSecond
+            };
         }
     }
 
@@ -334,12 +343,14 @@ namespace NTEServerSwitch.Core
             foreach (DownloadItem item in pending)
             {
                 token.ThrowIfCancellationRequested();
+                long itemBytes = item.Entry.ZipSize > 0 ? item.Entry.ZipSize : item.Entry.Size;
                 double fraction = totalZip > 0 ? Math.Min(0.99, (double)done / totalZip) : -1;
+                double itemSpan = totalZip > 0 ? (double)itemBytes / totalZip : 0;
                 Report(progress, "下载资源",
                        item.Channel.DisplayName + "：" + item.Entry.Path, fraction);
                 try
                 {
-                    await DownloadOneAsync(item, token).ConfigureAwait(false);
+                    await DownloadOneAsync(item, progress, fraction, itemSpan, token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -350,7 +361,7 @@ namespace NTEServerSwitch.Core
                     SetDownloadFailed(report, item.Channel);
                     _log.Error("下载失败 " + item.Channel.DisplayName + " " + item.Entry.Path + "：" + ex.Message);
                 }
-                done += item.Entry.ZipSize > 0 ? item.Entry.ZipSize : item.Entry.Size;
+                done += itemBytes;
             }
 
             Report(progress, "检查缓存", "正在清理过期文件…", -1);
@@ -457,7 +468,8 @@ namespace NTEServerSwitch.Core
             return seeded;
         }
 
-        private async Task DownloadOneAsync(DownloadItem item, CancellationToken token)
+        private async Task DownloadOneAsync(DownloadItem item, IProgress<SyncProgress> progress,
+                                          double fractionBase, double fractionSpan, CancellationToken token)
         {
             string destination = _cache.CachedPath(item.Channel, item.Entry);
             if (destination == null)
@@ -467,9 +479,25 @@ namespace NTEServerSwitch.Core
 
             string zipPath = Path.Combine(_cache.TempDirectory, Guid.NewGuid().ToString("N") + ".zip");
             string url = Endpoints.FileZipUrl(item.DirectoryUrl, item.Entry.Path);
+
+            // 把"这个文件下载了多少"折算进整体进度，并把速度透传给界面
+            var itemProgress = progress == null
+                                   ? null
+                                   : new Progress<DownloadProgress>(p =>
+                                   {
+                                       double span = fractionSpan > 0 && p.Total > 0
+                                                         ? fractionSpan * Math.Min(1.0, (double)p.Received / p.Total)
+                                                         : 0;
+                                       double value = fractionBase < 0
+                                                          ? -1
+                                                          : Math.Min(0.99, fractionBase + span);
+                                       Report(progress, "下载资源",
+                                              item.Channel.DisplayName + "：" + item.Entry.Path,
+                                              value, p.BytesPerSecond);
+                                   });
             try
             {
-                await _client.DownloadAsync(url, zipPath, null, token).ConfigureAwait(false);
+                await _client.DownloadAsync(url, zipPath, itemProgress, token).ConfigureAwait(false);
 
                 if (!string.IsNullOrEmpty(item.Entry.ZipMd5))
                 {
@@ -592,11 +620,12 @@ namespace NTEServerSwitch.Core
             }
         }
 
-        private static void Report(IProgress<SyncProgress> progress, string stage, string detail, double fraction)
+        private static void Report(IProgress<SyncProgress> progress, string stage, string detail, double fraction,
+                                   double bytesPerSecond = 0)
         {
             if (progress != null)
             {
-                progress.Report(SyncProgress.Create(stage, detail, fraction));
+                progress.Report(SyncProgress.Create(stage, detail, fraction, bytesPerSecond));
             }
         }
 

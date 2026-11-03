@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -49,7 +51,7 @@ namespace NTEServerSwitch.Core
             }, "获取 " + url, token);
         }
 
-        public async Task<long> DownloadAsync(string url, string destinationPath, IProgress<long> progress,
+        public async Task<long> DownloadAsync(string url, string destinationPath, IProgress<DownloadProgress> progress,
                                               CancellationToken token)
         {
             if (string.IsNullOrEmpty(url))
@@ -83,6 +85,27 @@ namespace NTEServerSwitch.Core
                             {
                                 var buffer = new byte[64 * 1024];
                                 long received = 0;
+                                long total = -1;
+                                try
+                                {
+                                    long? length = response.Content.Headers.ContentLength;
+                                    if (length.HasValue)
+                                    {
+                                        total = length.Value;
+                                    }
+                                }
+                                catch
+                                {
+                                    total = -1;
+                                }
+
+                                // 速度用滑动窗口估算：每 250ms 采样一次再做指数平滑，
+                                // 这样界面上的数字不会因为一次 64KB 读取的抖动乱跳。
+                                var clock = Stopwatch.StartNew();
+                                double smoothed = 0;
+                                long lastBytes = 0;
+                                double lastSeconds = 0;
+
                                 while (true)
                                 {
                                     int read = await input.ReadAsync(buffer, 0, buffer.Length, timeout.Token)
@@ -95,9 +118,40 @@ namespace NTEServerSwitch.Core
                                     received += read;
                                     if (progress != null)
                                     {
-                                        progress.Report(received);
+                                        double elapsed = clock.Elapsed.TotalSeconds;
+                                        double delta = elapsed - lastSeconds;
+                                        if (delta >= 0.25)
+                                        {
+                                            double instant = (received - lastBytes) / delta;
+                                            smoothed = smoothed <= 0 ? instant : smoothed * 0.6 + instant * 0.4;
+                                            lastBytes = received;
+                                            lastSeconds = elapsed;
+                                            progress.Report(new DownloadProgress
+                                            {
+                                                Received = received,
+                                                Total = total,
+                                                BytesPerSecond = smoothed
+                                            });
+                                        }
                                     }
                                 }
+
+                                if (progress != null)
+                                {
+                                    double elapsed = clock.Elapsed.TotalSeconds;
+                                    if (elapsed > 0.2)
+                                    {
+                                        // 收尾报告一次：保证最终进度与平均速度都落到实处
+                                        double average = received / elapsed;
+                                        progress.Report(new DownloadProgress
+                                        {
+                                            Received = received,
+                                            Total = total > 0 ? total : received,
+                                            BytesPerSecond = smoothed > 0 ? smoothed : average
+                                        });
+                                    }
+                                }
+                                output.Flush();
                                 return received;
                             }
                         }
