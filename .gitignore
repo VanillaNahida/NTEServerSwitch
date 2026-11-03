@@ -47,3 +47,9 @@ Properties/PublishProfiles/*.user
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# 本工具运行时产物
+sdkres/
+logs/
+dist/
+_probe/

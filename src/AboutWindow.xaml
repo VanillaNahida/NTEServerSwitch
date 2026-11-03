@@ -1,7 +1,7 @@
 <Window x:Class="NTEServerSwitch.AboutWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="关于本程序" Height="343" Width="458"
+        Title="关于本程序" Height="400" Width="470"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Grid Margin="20">
@@ -16,33 +16,33 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Image Grid.Row="0" 
-               Width="100" 
+        <Image Grid.Row="0"
+               Width="100"
                HorizontalAlignment="Center">
             <Image.Source>
                 <BitmapImage UriSource="pack://application:,,,/AppIcon.ico" />
             </Image.Source>
         </Image>
 
-        <TextBlock Grid.Row="1" 
-                   Text="《异环》官服B服切换器" 
+        <TextBlock Grid.Row="1"
+                   Text="《异环》官服B服切换器"
                    FontSize="16" FontWeight="Bold"
                    HorizontalAlignment="Center"
                    Margin="0,5,0,5"/>
 
-        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" 
-                   Text="版本：1.0.0" 
+        <TextBlock Grid.Row="2"
+                   Text="版本：1.1.0"
                    FontSize="14"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,5"/>
 
-        <TextBlock Grid.Row="3" Grid.ColumnSpan="2" 
-                   Text="一个用来快捷切换《异环》官服B服的小工具，使用C#原生开发" 
+        <TextBlock Grid.Row="3"
+                   Text="一个用来快捷切换《异环》官服B服的小工具，使用C#原生开发。&#10;切换时会用本地 sdkres 资源替换对应渠道的文件，并清理另一个渠道多出来的文件。"
                    FontSize="12" Foreground="Gray"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,15" TextWrapping="Wrap" TextAlignment="Center"/>
 
-        <StackPanel Grid.Row="4" Grid.ColumnSpan="2"
+        <StackPanel Grid.Row="4"
                     HorizontalAlignment="Center">
             <TextBlock FontSize="14" Margin="0,0,0,5" TextWrapping="Wrap">
                 GitHub开源地址：
@@ -60,7 +60,7 @@
             </TextBlock>
         </StackPanel>
 
-        <Button Grid.Row="7" 
+        <Button Grid.Row="7"
                 Content="确定" Width="90"
                 HorizontalAlignment="Center"
                 Click="OkButton_Click" Margin="0,10,0,10"/>
