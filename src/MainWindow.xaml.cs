@@ -322,13 +322,16 @@ namespace NTEServerSwitch
                 WorkProgressBar.IsIndeterminate = false;
                 WorkProgressBar.Value = Math.Max(0, Math.Min(1, progress.Fraction)) * 100;
             }
-            string text = string.IsNullOrEmpty(progress.Detail)
-                              ? progress.Stage
-                              : progress.Stage + " · " + progress.Detail;
+            // 顺序固定为「阶段 · 速度：x MB/s · 明细」：明细是文件路径，一直在变，
+            // 速度夹在中间不会跟着路径长度来回移动，读起来也不费劲。
+            string text = progress.Stage;
             if (progress.BytesPerSecond > 0.5)
             {
-                // 速度放在最前面：后面的文件路径会不停变化，放在末尾速度数字会跟着乱移动，很难读
-                text = "[" + PathUtil.FormatBytes((long)progress.BytesPerSecond) + "/s] " + text;
+                text += " · 速度：" + PathUtil.FormatBytes((long)progress.BytesPerSecond) + "/s";
+            }
+            if (!string.IsNullOrEmpty(progress.Detail))
+            {
+                text += " · " + progress.Detail;
             }
             WorkProgressText.Text = text;
         }
