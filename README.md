@@ -123,8 +123,10 @@ pwsh -File ./publish.ps1
 
 | 包 | 是否需要装运行时 | 大小 |
 | --- | --- | --- |
-| `异环切服器_need-runtime.zip` | 需要安装 .NET 8 桌面运行时 | 约 0.7 MB |
-| `异环切服器_self-contained.zip` | 免安装，解压即用 | 约 64 MB |
+| `NTEServerSwitch_need-runtime.zip` | 需要安装 .NET 8 桌面运行时 | 约 0.7 MB |
+| `NTEServerSwitch_self-contained.zip` | 免安装，解压即用 | 约 64 MB |
+
+主程序文件名是 `NTEServerSwitch.exe`（ASCII）。程序集名必须是纯 ASCII —— 中文 exe/dll 名在某些系统区域设置下会出现莫名其妙的加载问题，所以界面和日志保持中文，只有文件名用英文。
 
 自包含版是 6 个文件（主程序 + 5 个 WPF 原生 DLL），这些原生 DLL 无法打进单文件，所以必须按压缩包分发。
 
@@ -159,6 +161,12 @@ _harness/                  开发期自测工程（不参与主工程编译）
 
 ```bash
 dotnet run --project _harness/Harness.csproj -c Release
+```
+
+发布包支持 `--smoke-test` 自检：启动后自动打开主窗口和日志窗口、强制布局一次再退出，退出码 0 表示一切正常。用来验证**打出来的产物**能不能真正开窗（`InvariantGlobalization=true` 导致 WPF 字体缓存崩溃这个问题，就是靠它当场抓到的）：
+
+```powershell
+.\dist\self-contained\NTEServerSwitch.exe --smoke-test
 ```
 
 ## 👥 贡献指南

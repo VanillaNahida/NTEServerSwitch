@@ -522,6 +522,12 @@ namespace NTEServerSwitch
 
         private void LogButton_Click(object sender, RoutedEventArgs e)
         {
+            ShowLogWindow();
+        }
+
+        /// <summary>打开（或激活）日志窗口。自检代码也走这里，保证测的是同一条路径。</summary>
+        internal LogWindow ShowLogWindow()
+        {
             if (_logWindow == null)
             {
                 _logWindow = new LogWindow();
@@ -529,6 +535,7 @@ namespace NTEServerSwitch
             }
             _logWindow.Show();
             _logWindow.Activate();
+            return _logWindow;
         }
 
         private void AboutButton_Click(object sender, RoutedEventArgs e)

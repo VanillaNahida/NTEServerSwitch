@@ -6,8 +6,9 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>AppIcon.ico</ApplicationIcon>
-    <AssemblyName>异环切服器</AssemblyName>
-    <RootNamespace>异环切服器</RootNamespace>
+    <!-- 程序集名必须是纯 ASCII：中文 exe/dll 名在某些系统区域设置下会出现莫名其妙的加载问题 -->
+    <AssemblyName>NTEServerSwitch</AssemblyName>
+    <RootNamespace>NTEServerSwitch</RootNamespace>
     <Version>1.1.0</Version>
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
     <FileVersion>1.1.0.0</FileVersion>

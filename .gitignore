@@ -52,4 +52,6 @@ Thumbs.db
 sdkres/
 logs/
 dist/
+dist-*/
+dist.old-*/
 _probe/
