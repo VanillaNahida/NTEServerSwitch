@@ -9,9 +9,9 @@
     <!-- 程序集名必须是纯 ASCII：中文 exe/dll 名在某些系统区域设置下会出现莫名其妙的加载问题 -->
     <AssemblyName>NTEServerSwitch</AssemblyName>
     <RootNamespace>NTEServerSwitch</RootNamespace>
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
+    <Version>1.2.1</Version>
+    <AssemblyVersion>1.2.1.0</AssemblyVersion>
+    <FileVersion>1.2.1.0</FileVersion>
     <Company>哔哩哔哩@香草味的纳西妲喵</Company>
     <Product>异环官服B服切换器 哔哩哔哩@香草味的纳西妲喵</Product>
     <Description>《异环》官服B服切换工具</Description>

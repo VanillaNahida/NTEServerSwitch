@@ -32,7 +32,7 @@
 
         <TextBlock Grid.Row="2"
                    x:Name="VersionText"
-                   Text="版本：1.2.0"
+                   Text="版本：1.2.1"
                    FontSize="14"
                    HorizontalAlignment="Center"
                    Margin="0,0,0,5"/>
