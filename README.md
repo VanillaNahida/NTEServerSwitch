@@ -21,6 +21,8 @@ _✨ 异环官服B服切换器 ✨_
 - **不再膨胀**：切换时按官方清单把渠道差异文件整体替换，并删除另一个渠道独有的文件，反复切换体积不会越滚越大
 - **资源缓存**：首次启动时从官方 CDN 拉取两个渠道的差异文件，存放在程序目录的 `sdkres` 里，之后切服只做本地复制
 - **自动更新**：每次启动比对线上清单版本，版本变化时自动补下载
+- **版本检查**：启动时顺带比对 GitHub 上的最新发行版，有新版本会直接问你要不要去下载（检查失败静默处理，不影响使用）
+- **下载进度**：显示当前下载的文件、整体进度与实时速度（MB/s）
 - **状态显示**：实时显示当前服务器状态，不同服务器显示不同颜色
 - **进程检测**：切换前自动检测并提示关闭游戏相关进程
 - **路径选择**：支持手动选择游戏安装路径
@@ -33,6 +35,7 @@ _✨ 异环官服B服切换器 ✨_
 3. 首次运行会自动建立资源缓存（官服约 55 MB、B服约 241 MB，受网速影响需要几分钟）
 4. 点击「一键切官服」或「一键切B服」进行服务器切换
 5. 需要看细节或反馈问题时，点「日志」打开独立日志窗口，可导出日志文件
+6. 想手动看有没有新版本，点「检查更新」即可（启动时也会自动检查一次）
 
 ## 为什么以前越切越大
 
@@ -130,6 +133,30 @@ pwsh -File ./publish.ps1
 
 自包含版是 6 个文件（主程序 + 5 个 WPF 原生 DLL），这些原生 DLL 无法打进单文件，所以必须按压缩包分发。
 
+### 自动发布（GitHub Actions）
+
+仓库里已经配好两条工作流，都在 `.github/workflows/`：
+
+| 工作流 | 触发方式 | 做什么 |
+| --- | --- | --- |
+| `release.yml` | 推送 `v*.*.*` 的 tag，或在 Actions 页面手动填版本号 | 构建两个包 → 生成更新说明 → 创建/更新 GitHub Release 并上传两个 zip |
+| `build-windows.yml` | 手动触发，以及向 main 分支 push / PR | 只构建并上传 artifact，用于验证代码能不能编过，不发布 |
+
+发版流程：先把 `NTEServerSwitch.csproj` 里的 `Version` 改成新版本号并提交，然后打 tag 推送即可：
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+Release 的更新说明由 `.github/scripts/release-notes.ps1` 自动生成：按 Conventional Commits（`feat:` / `fix:` / `perf:` 等）分组列出本次提交，并附上两个安装包的直链下载表格、文件大小和使用步骤。
+
+> 只写纯 PowerShell，不需要 Python。本地想预览更新说明：
+> 
+> ```powershell
+> pwsh -File .github/scripts/release-notes.ps1 -Repository VanillaNahida/NTEServerSwitch -Tag v1.2.0 -Version 1.2.0 -FromTag v1.0.0 -DistDir dist -OutFile release-notes.md
+> ```
+
 ## 项目结构
 
 ```
@@ -152,6 +179,11 @@ src/
     PathUtil.cs            清单路径安全拼接
     ProcessGuard.cs        关闭游戏相关进程
     LogService.cs          日志
+    DownloadProgress.cs    下载进度（已下载字节数 + 实时速度）
+    UpdateChecker.cs       检查 GitHub 上的最新发行版
+publish.ps1                双包发布脚本（自包含 / 依赖运行时）
+.github/workflows/         CI：build-windows.yml 构建、release.yml 自动发布
+.github/scripts/           生成 Release 更新说明的 PowerShell 脚本
 _harness/                  开发期自测工程（不参与主工程编译）
 ```
 
@@ -163,10 +195,15 @@ _harness/                  开发期自测工程（不参与主工程编译）
 dotnet run --project _harness/Harness.csproj -c Release
 ```
 
-发布包支持 `--smoke-test` 自检：启动后自动打开主窗口和日志窗口、强制布局一次再退出，退出码 0 表示一切正常。用来验证**打出来的产物**能不能真正开窗（`InvariantGlobalization=true` 导致 WPF 字体缓存崩溃这个问题，就是靠它当场抓到的）：
+### 冒烟自检（`--smoke-test`）
+
+`--smoke-test` 只在 **Debug** 构建里存在：启动后自动打开主窗口和日志窗口、强制布局一次再退出，退出码 0 表示一切正常。用来验证**打出来的产物**能不能真正开窗（`InvariantGlobalization=true` 导致 WPF 字体缓存崩溃这个问题，就是靠它当场抓到的）。
+
+正式发布会用 `-c Release` 编译，所以 Release 构建和发布出来的 exe **没有**这个参数，传了也会被当作普通启动忽略。本地要自检请显式用 Debug 构建：
 
 ```powershell
-.\dist\self-contained\NTEServerSwitch.exe --smoke-test
+dotnet build NTEServerSwitch.csproj -c Debug
+.\bin\Debug\net8.0-windows\NTEServerSwitch.exe --smoke-test
 ```
 
 ## 👥 贡献指南
@@ -184,7 +221,7 @@ dotnet run --project _harness/Harness.csproj -c Release
 
 # bug反馈
 如果在使用过程中遇到任何问题，请通过以下方式反馈：
-- [Issue](https://github.com/VanillaNahida/Group-Geetest-Verify/issues)
+- [Issue](https://github.com/VanillaNahida/NTEServerSwitch/issues)
 - QQ群：[195260107](https://qm.qq.com/q/1od5TMYrKE)
 
 # QQ群：

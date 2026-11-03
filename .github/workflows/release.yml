@@ -1,0 +1,156 @@
+name: Release
+
+# 打 tag（形如 v1.2.0）自动发布；也可以在 Actions 页面手动指定版本号发布。
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（例如 1.2.0；留空则读取 csproj 里的 Version）'
+        required: false
+        default: ''
+      draft:
+        description: '发布为草稿（不立即公开）'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: 构建并发布
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 安装 .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 解析版本号
+        id: ver
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = ($env:INPUT_VERSION ?? '').Trim()
+          if (-not $version -and $env:REF_TYPE -eq 'tag') {
+              $version = $env:REF_NAME.TrimStart('v', 'V')
+          }
+          if (-not $version) {
+              $version = ([xml](Get-Content NTEServerSwitch.csproj -Raw)).Project.PropertyGroup.Version.Trim()
+          }
+          if ($version -notmatch '^[0-9]+(\.[0-9]+)+$') {
+              Write-Host "::error::版本号格式不对：$version（应形如 1.2.0）"
+              exit 1
+          }
+          $projectVersion = ([xml](Get-Content NTEServerSwitch.csproj -Raw)).Project.PropertyGroup.Version.Trim()
+          if ($projectVersion -ne $version) {
+              Write-Host "::warning title=版本号不一致::NTEServerSwitch.csproj 里是 $projectVersion，本次发布的是 $version"
+          }
+          $tag = 'v' + $version
+          $prior = ''
+          $tags = @(git tag --list 'v*' --sort=-v:refname)
+          foreach ($candidate in $tags) {
+              if ($candidate -and $candidate -ne $tag) { $prior = $candidate; break }
+          }
+          Write-Host "版本 $version，tag $tag，上一个 tag：$prior"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "prior=$prior" >> $env:GITHUB_OUTPUT
+
+      - name: 构建两个发布包
+        shell: pwsh
+        run: ./publish.ps1
+
+      - name: 校验构建产物
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = @(
+              'dist/NTEServerSwitch_self-contained.zip',
+              'dist/NTEServerSwitch_need-runtime.zip'
+          )
+          $missing = @($expected | Where-Object { -not (Test-Path $_) })
+          if ($missing.Count -gt 0) {
+              foreach ($file in $missing) { Write-Host "::error::缺少构建产物：$file" }
+              exit 1
+          }
+          Get-ChildItem dist -Filter *.zip | ForEach-Object {
+              Write-Host ('{0}  {1:N1} MB' -f $_.Name, ($_.Length / 1MB))
+          }
+
+      - name: 生成更新说明
+        shell: pwsh
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          PRIOR: ${{ steps.ver.outputs.prior }}
+        run: |
+          ./.github/scripts/release-notes.ps1 -Repository $env:REPOSITORY -Tag $env:TAG -Version $env:VERSION -FromTag $env:PRIOR -DistDir dist -OutFile release-notes.md
+
+      - name: 展示更新说明
+        shell: pwsh
+        run: Get-Content release-notes.md
+
+      - name: 上传构建产物（供排查问题）
+        uses: actions/upload-artifact@v4
+        with:
+          name: NTEServerSwitch-v${{ steps.ver.outputs.version }}
+          path: |
+            dist/NTEServerSwitch_self-contained.zip
+            dist/NTEServerSwitch_need-runtime.zip
+            release-notes.md
+          retention-days: 30
+
+      - name: 创建或更新 Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          DRAFT: ${{ github.event.inputs.draft }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $assets = @(
+              'dist/NTEServerSwitch_self-contained.zip',
+              'dist/NTEServerSwitch_need-runtime.zip'
+          )
+          $extra = @()
+          if ($env:DRAFT -eq 'true') { $extra += '--draft' }
+          $title = 'v' + $env:VERSION
+
+          gh release view $env:TAG --json tagName 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+              Write-Host "Release $env:TAG 已存在，改为更新"
+              gh release edit $env:TAG --title $title --notes-file release-notes.md @extra
+              if ($LASTEXITCODE -ne 0) { exit 1 }
+              gh release upload $env:TAG @assets --clobber
+              if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          else {
+              gh release create $env:TAG --title $title --notes-file release-notes.md @extra @assets
+              if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+          Write-Host "::notice::发布完成：$title"
