@@ -8,19 +8,26 @@ if (Test-Path $dist) {
         Remove-Item $dist -Recurse -Force -ErrorAction Stop
     }
     catch {
-        # dist 里的 exe/dll 可能正被运行中的切服器占用；先试改名让开，改不动就换个输出目录
-        $moved = $false
-        $stale = Join-Path $PSScriptRoot ('dist.old-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-        try {
-            Move-Item $dist $stale -ErrorAction Stop
-            $moved = $true
-            Write-Host "==> dist 被占用，已重命名为 $(Split-Path $stale -Leaf)（确认没在用后可手动删除）" -ForegroundColor Yellow
+        # dist 里的 exe/dll 正被运行中的切服器占用。Move-Item 对目录只会搬走能搬的部分，
+        # 所以这里一律以磁盘实际结果为准，绝不能让一次占用把整次打包搞失败。
+        $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $stale = Join-Path $PSScriptRoot ('dist.old-' + $stamp)
+        try { Move-Item $dist $stale -ErrorAction Stop } catch { }
+
+        if (Test-Path $dist) {
+            # 还剩一个目录壳：空壳就删掉继续用 dist，里面有残留文件才换新目录
+            $left = @(Get-ChildItem $dist -Force -ErrorAction SilentlyContinue)
+            if ($left.Count -eq 0) { Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue }
         }
-        catch { }
-        if (-not $moved) {
-            $dist = Join-Path $PSScriptRoot ('dist-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+
+        if (Test-Path $dist) {
+            if (Test-Path $stale) { Remove-Item $stale -Recurse -Force -ErrorAction SilentlyContinue }
+            $dist = Join-Path $PSScriptRoot ('dist-' + $stamp)
             Write-Host "==> dist 正被运行中的切服器占用，本次产物改放到 $(Split-Path $dist -Leaf)" -ForegroundColor Yellow
-            Write-Host "    关掉切服器后重跑本脚本即可回到 dist" -ForegroundColor Yellow
+            Write-Host '    关掉切服器后重跑本脚本即可回到 dist' -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "==> dist 被占用，旧产物已重命名为 $(Split-Path $stale -Leaf)（确认没在用后可手动删除）" -ForegroundColor Yellow
         }
     }
 }
@@ -61,7 +68,7 @@ foreach ($dir in Get-ChildItem $dist -Directory) {
 }
 
 Write-Host ''
-Write-Host '完成，产物在 dist\\：' -ForegroundColor Green
+Write-Host ('完成，产物在 ' + (Split-Path $dist -Leaf) + '\：') -ForegroundColor Green
 Get-ChildItem $dist -Filter *.zip | ForEach-Object {
     Write-Host ('  {0}  ({1:N1} MB)' -f $_.Name, ($_.Length / 1MB))
 }
