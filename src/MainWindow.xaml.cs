@@ -327,7 +327,8 @@ namespace NTEServerSwitch
                               : progress.Stage + " · " + progress.Detail;
             if (progress.BytesPerSecond > 0.5)
             {
-                text += " · " + PathUtil.FormatBytes((long)progress.BytesPerSecond) + "/s";
+                // 速度放在最前面：后面的文件路径会不停变化，放在末尾速度数字会跟着乱移动，很难读
+                text = "[" + PathUtil.FormatBytes((long)progress.BytesPerSecond) + "/s] " + text;
             }
             WorkProgressText.Text = text;
         }
