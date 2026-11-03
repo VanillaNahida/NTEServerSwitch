@@ -184,16 +184,9 @@ src/
 publish.ps1                双包发布脚本（自包含 / 依赖运行时）
 .github/workflows/         CI：build-windows.yml 构建、release.yml 自动发布
 .github/scripts/           生成 Release 更新说明的 PowerShell 脚本
-_harness/                  开发期自测工程（不参与主工程编译）
 ```
 
 ## 自测
-
-`_harness` 是一个控制台自测工程，会真实联网同步一次缓存，然后在临时假目录里模拟「切官服 → 切B服 → 切回官服」，校验配置项、文件落地、残留删除与体积回落：
-
-```bash
-dotnet run --project _harness/Harness.csproj -c Release
-```
 
 ### 冒烟自检（`--smoke-test`）
 
