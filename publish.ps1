@@ -1,4 +1,8 @@
 # 一键打包：同时产出自包含版（免装运行时）和框架依赖版（1 MB，需装 .NET 8 桌面运行时）
+param(
+    # 压缩包命名用的版本号（如 1.2.1），留空则读取 csproj 里的 Version
+    [string]$Version = ''
+)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -33,6 +37,14 @@ if (Test-Path $dist) {
 }
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 
+if (-not $Version.Trim()) {
+    $Version = ([xml](Get-Content (Join-Path $PSScriptRoot 'NTEServerSwitch.csproj') -Raw)).Project.PropertyGroup.Version.Trim()
+}
+$Version = $Version.TrimStart('v', 'V')
+if ($Version -notmatch '^[0-9]+(\.[0-9]+)+$') {
+    throw "版本号格式不对：$Version（应形如 1.2.1）"
+}
+
 function Publish-Variant {
     param([string]$Name, [bool]$SelfContained)
 
@@ -62,7 +74,7 @@ Publish-Variant -Name 'self-contained' -SelfContained $true
 Publish-Variant -Name 'need-runtime' -SelfContained $false
 
 foreach ($dir in Get-ChildItem $dist -Directory) {
-    $zip = Join-Path $dist ("NTEServerSwitch_" + $dir.Name + ".zip")
+    $zip = Join-Path $dist ("NTEServerSwitch_v" + $Version + "_" + $dir.Name + ".zip")
     Write-Host "==> 压缩 $($dir.Name)" -ForegroundColor Cyan
     Compress-Archive -Path (Join-Path $dir.FullName '*') -DestinationPath $zip -Force
 }

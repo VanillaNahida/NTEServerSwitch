@@ -126,8 +126,10 @@ pwsh -File ./publish.ps1
 
 | 包 | 是否需要装运行时 | 大小 |
 | --- | --- | --- |
-| `NTEServerSwitch_need-runtime.zip` | 需要安装 .NET 8 桌面运行时 | 约 0.7 MB |
-| `NTEServerSwitch_self-contained.zip` | 免安装，解压即用 | 约 64 MB |
+| `NTEServerSwitch_v<版本号>_need-runtime.zip` | 需要安装 .NET 8 桌面运行时 | 约 0.7 MB |
+| `NTEServerSwitch_v<版本号>_self-contained.zip` | 免安装，解压即用 | 约 64 MB |
+
+压缩包文件名带版本号（如 `NTEServerSwitch_v1.2.1_self-contained.zip`），默认读取 csproj 里的 `Version`，也可以用 `./publish.ps1 -Version 1.2.1` 手动指定。
 
 主程序文件名是 `NTEServerSwitch.exe`（ASCII）。程序集名必须是纯 ASCII —— 中文 exe/dll 名在某些系统区域设置下会出现莫名其妙的加载问题，所以界面和日志保持中文，只有文件名用英文。
 

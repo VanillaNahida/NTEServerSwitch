@@ -124,8 +124,8 @@ if ($range) {
 
 # ---------- 下载表格 ----------
 $assets = @(
-    @{ Name = 'NTEServerSwitch_self-contained.zip'; Desc = '**推荐**。自带 .NET 运行时，解压即用，什么都不用装'; Hint = '约 65 MB' },
-    @{ Name = 'NTEServerSwitch_need-runtime.zip'; Desc = '体积小，但需要先装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)'; Hint = '约 1 MB' }
+    @{ Name = ('NTEServerSwitch_v' + $Version + '_self-contained.zip'); Desc = '**推荐**。自带 .NET 运行时，解压即用，什么都不用装'; Hint = '约 65 MB' },
+    @{ Name = ('NTEServerSwitch_v' + $Version + '_need-runtime.zip'); Desc = '体积小，但需要先装 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)'; Hint = '约 1 MB' }
 )
 
 function Get-AssetSize {
@@ -143,7 +143,7 @@ function Get-AssetSize {
 [void]$sb.AppendLine('## 下载说明')
 [void]$sb.AppendLine()
 [void]$sb.AppendLine('> [!TIP]')
-[void]$sb.AppendLine('> 不确定选哪个？绝大多数 Windows 10/11 用户下载 `NTEServerSwitch_self-contained.zip` 即可。')
+[void]$sb.AppendLine('> 不确定选哪个？绝大多数 Windows 10/11 用户下载 `NTEServerSwitch_v' + $Version + '_self-contained.zip` 即可。')
 [void]$sb.AppendLine()
 [void]$sb.AppendLine('### 程序包说明')
 [void]$sb.AppendLine()

@@ -81,15 +81,17 @@ jobs:
 
       - name: 构建两个发布包
         shell: pwsh
-        run: ./publish.ps1
+        run: ./publish.ps1 -Version '${{ steps.ver.outputs.version }}'
 
       - name: 校验构建产物
         shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           $expected = @(
-              'dist/NTEServerSwitch_self-contained.zip',
-              'dist/NTEServerSwitch_need-runtime.zip'
+              "dist/NTEServerSwitch_v$($env:VERSION)_self-contained.zip",
+              "dist/NTEServerSwitch_v$($env:VERSION)_need-runtime.zip"
           )
           $missing = @($expected | Where-Object { -not (Test-Path $_) })
           if ($missing.Count -gt 0) {
@@ -119,8 +121,8 @@ jobs:
         with:
           name: NTEServerSwitch-v${{ steps.ver.outputs.version }}
           path: |
-            dist/NTEServerSwitch_self-contained.zip
-            dist/NTEServerSwitch_need-runtime.zip
+            dist/NTEServerSwitch_v${{ steps.ver.outputs.version }}_self-contained.zip
+            dist/NTEServerSwitch_v${{ steps.ver.outputs.version }}_need-runtime.zip
             release-notes.md
           retention-days: 30
 
@@ -134,8 +136,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $assets = @(
-              'dist/NTEServerSwitch_self-contained.zip',
-              'dist/NTEServerSwitch_need-runtime.zip'
+              "dist/NTEServerSwitch_v$($env:VERSION)_self-contained.zip",
+              "dist/NTEServerSwitch_v$($env:VERSION)_need-runtime.zip"
           )
           $extra = @()
           if ($env:DRAFT -eq 'true') { $extra += '--draft' }
